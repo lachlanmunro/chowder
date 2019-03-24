@@ -34,18 +34,16 @@ type VirusScanner interface {
 	Ok() (bool, string, error)
 }
 
-// ClamAV is a virus scanning service backed by ClamAV
+// ClamAV is a virus scanning service backed by a ClamAV tcp connection
 type ClamAV struct {
-	socketType       string
 	connectionString string
 	prefixPool       sync.Pool
 	bufferPool       sync.Pool
 }
 
-// NewClamAV returns a new correctly set up ClamAV backed VirusScanner
+// NewClamAV returns a new ClamAV tcp backed VirusScanner
 func NewClamAV(connectionString string) VirusScanner {
 	return &ClamAV{
-		socketType:       "tcp",
 		connectionString: connectionString,
 		prefixPool: sync.Pool{
 			New: func() interface{} {
@@ -60,7 +58,7 @@ func NewClamAV(connectionString string) VirusScanner {
 	}
 }
 
-// Scan streams the supplied io.Reader to the backing Antivirus
+// Scan streams the supplied io.Reader to the backing ClamAV Antivirus
 func (av *ClamAV) Scan(stream io.Reader) (bool, string, error) {
 	response, err := av.executeCommand(instream, func(c io.Writer) error {
 		if err := av.copy(c, stream); err != nil {
@@ -74,7 +72,7 @@ func (av *ClamAV) Scan(stream io.Reader) (bool, string, error) {
 	return strings.Contains(response, "FOUND"), response, nil
 }
 
-// Ok checks that the backing Antivirus is healthy
+// Ok checks that the backing ClamAV Antivirus is healthy
 func (av *ClamAV) Ok() (bool, string, error) {
 	response, err := av.executeCommand(ping, nil)
 	if err != nil {
@@ -84,7 +82,7 @@ func (av *ClamAV) Ok() (bool, string, error) {
 }
 
 func (av *ClamAV) executeCommand(command io.Reader, additionalActions func(io.Writer) error) (string, error) {
-	c, err := net.Dial(av.socketType, av.connectionString)
+	c, err := net.Dial("tcp", av.connectionString)
 	if err != nil {
 		return "", fmt.Errorf("could not connect: %v", err)
 	}

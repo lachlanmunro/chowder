@@ -2,13 +2,12 @@ package chowder
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/rs/zerolog/log"
 )
-
-var okAsBytes = []byte("OK")
 
 // Response is a baseline response
 type Response struct {
@@ -41,8 +40,7 @@ func (p *Proxy) Scan(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 	writeResponse(w, r, &ScanResponse{
 		Infected: infected,
 		Response: Response{
-			Message: http.StatusText(http.StatusInternalServerError),
-			Error:   err.Error(),
+			Message: msg,
 		}}, http.StatusOK)
 }
 
@@ -51,8 +49,8 @@ func (p *Proxy) Ok(w http.ResponseWriter, r *http.Request, _ httprouter.Params) 
 	ok, msg, err := p.AntiVirus.Ok()
 	if err != nil {
 		writeResponse(w, r, &Response{
-			Message: msg,
-			Error:   err.Error(),
+			Message: "Down",
+			Error:   fmt.Sprintf("%v - Daemon responded with: %v", err.Error(), msg),
 		}, http.StatusInternalServerError)
 		return
 	}
