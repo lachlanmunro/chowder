@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/rs/zerolog/log"
 )
 
 // Response is a baseline response
@@ -30,13 +29,14 @@ type Proxy struct {
 func (p *Proxy) Scan(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	infected, msg, err := p.AntiVirus.Scan(r.Body)
 	if err != nil {
-		log.Error().Err(err).Str("daemon", msg).Msg("Failed steam scan")
 		writeResponse(w, r, &Response{
 			Message: msg,
 			Error:   err.Error(),
 		}, http.StatusInternalServerError)
+		getLog(r.Context()).Error().Str("daemon-response", msg).Err(err).Msg("Failed to scan")
 		return
 	}
+	getLog(r.Context()).Info().Str("daemon-response", msg).Bool("infected", infected).Msg("Scan completed")
 	writeResponse(w, r, &ScanResponse{
 		Infected: infected,
 		Response: Response{
@@ -48,6 +48,7 @@ func (p *Proxy) Scan(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 func (p *Proxy) Ok(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	ok, msg, err := p.AntiVirus.Ok()
 	if err != nil {
+		getLog(r.Context()).Error().Bool("ok", ok).Str("daemon-response", msg).Err(err).Msg("Failed to ping daemon")
 		writeResponse(w, r, &Response{
 			Message: "Down",
 			Error:   fmt.Sprintf("%v - daemon response: %v", err.Error(), msg),
@@ -59,8 +60,10 @@ func (p *Proxy) Ok(w http.ResponseWriter, r *http.Request, _ httprouter.Params) 
 			Message: "Down",
 			Error:   msg,
 		}, http.StatusInternalServerError)
+		getLog(r.Context()).Error().Bool("ok", ok).Str("daemon-response", msg).Msg("Pinged daemon")
 		return
 	}
+	getLog(r.Context()).Debug().Bool("ok", ok).Str("daemon-response", msg).Msg("Pinged daemon")
 	writeResponse(w, r, &Response{
 		Message: "Ok",
 	}, http.StatusOK)
