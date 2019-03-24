@@ -41,6 +41,6 @@ func main() {
 		Str("cert", *cert).
 		Str("key", *key).
 		Bool("pretty-logs", *pretty).
-		Msg("Started chowder proxy")
+		Msg("Started chowder")
 	log.Fatal().Err(http.ListenAndServeTLS(*bind, *cert, *key, chowder.LogRequests(router))).Msg("Closed")
 }

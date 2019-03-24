@@ -184,7 +184,6 @@ func newCommand(command string) io.Reader {
 	}
 }
 
-func (c *clamCommand) Read(p []byte) (n int, err error) {
-	n = copy(p, c.bytes)
-	return
+func (c *clamCommand) Read(p []byte) (int, error) {
+	return copy(p, c.bytes), nil
 }
