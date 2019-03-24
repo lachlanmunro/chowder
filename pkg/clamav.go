@@ -124,15 +124,12 @@ func getResponse(from net.Conn, to io.Writer, ok chan bool, err chan error) {
 	}()
 	var nr int64
 	nr, respErr = io.Copy(to, from)
+	if respErr == nil {
+		isOk = true
+	}
 	if nr > 0 {
 		read.Add(float64(nr))
 	}
-	if err != nil {
-		err <- respErr
-		return
-	}
-	respErr = nil
-	isOk = true
 }
 
 // Adapted from io.copyBuffer
