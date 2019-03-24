@@ -50,7 +50,7 @@ func (p *Proxy) Ok(w http.ResponseWriter, r *http.Request, _ httprouter.Params) 
 	if err != nil {
 		writeResponse(w, r, &Response{
 			Message: "Down",
-			Error:   fmt.Sprintf("%v - Daemon responded with: %v", err.Error(), msg),
+			Error:   fmt.Sprintf("%v - daemon response: %v", err.Error(), msg),
 		}, http.StatusInternalServerError)
 		return
 	}

@@ -86,6 +86,9 @@ func logLevelFromStatus(status int) *zerolog.Event {
 	case status < 400: // 300 -> 399
 		return log.Debug()
 	case status < 500: // 400 -> 499
+		if status == 404 {
+			return log.Info()
+		}
 		return log.Warn()
 	default:
 		return log.Error()

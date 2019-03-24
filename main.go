@@ -34,5 +34,13 @@ func main() {
 	router.POST("/scan", proxy.Scan)
 	router.GET("/healthz", proxy.Ok)
 	router.GET("/metrics", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) { promhttp.Handler().ServeHTTP(w, r) })
+	log.Info().
+		Str("log-level", *level).
+		Str("bind", *bind).
+		Str("av-url", *antivirusURL).
+		Str("cert", *cert).
+		Str("key", *key).
+		Bool("pretty-logs", *pretty).
+		Msg("Started chowder proxy")
 	log.Fatal().Err(http.ListenAndServeTLS(*bind, *cert, *key, chowder.LogRequests(router))).Msg("Closed")
 }
