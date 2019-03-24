@@ -16,6 +16,8 @@ func main() {
 	level := flag.String("level", "info", "Log level is one of debug, info, warn, error, fatal, panic")
 	bind := flag.String("bind", ":3399", "Binding URL")
 	antivirusURL := flag.String("antivirus", "127.0.0.1:3398", "Destination antivirus URL")
+	cert := flag.String("cert", "server.crt", "Server TLS certificate")
+	key := flag.String("key", "server.key", "Server TLS key")
 	pretty := flag.Bool("pretty", true, "Use pretty logging (slower)")
 	flag.Parse()
 	if *pretty {
@@ -32,5 +34,5 @@ func main() {
 	router.POST("/scan", proxy.Scan)
 	router.GET("/healthz", proxy.Ok)
 	router.GET("/metrics", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) { promhttp.Handler().ServeHTTP(w, r) })
-	log.Fatal().Err(http.ListenAndServe(*bind, chowder.LogRequests(router))).Msg("Closed")
+	log.Fatal().Err(http.ListenAndServeTLS(*bind, *cert, *key, chowder.LogRequests(router))).Msg("Closed")
 }
