@@ -2,6 +2,7 @@ package chowder
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -13,12 +14,11 @@ import (
 )
 
 var (
-	_        io.Reader    = &clamCommand{}
-	_        VirusScanner = &ClamAV{}
-	instream              = newCommand("INSTREAM")
-	ping                  = newCommand("PING")
-	noBytes               = []byte{}
-	written               = promauto.NewCounter(prometheus.CounterOpts{
+	errDeferNoResponse = errors.New("Response triggered defer without setting")
+	instream           = newCommand("INSTREAM")
+	ping               = newCommand("PING")
+	noBytes            = []byte{}
+	written            = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "chowder_written_bytes_total",
 		Help: "The total number of bytes written to the antivirus",
 	})
@@ -26,6 +26,8 @@ var (
 		Name: "chowder_read_bytes_total",
 		Help: "The total number of bytes read from the antivirus",
 	})
+	_ io.Reader    = &clamCommand{}
+	_ VirusScanner = &ClamAV{}
 )
 
 // VirusScanner is the interface for a virus scanning service
@@ -114,16 +116,23 @@ func (av *ClamAV) executeCommand(command io.Reader, additionalActions func(io.Wr
 }
 
 func getResponse(from net.Conn, to io.Writer, ok chan bool, err chan error) {
-	nr, respErr := io.Copy(to, from)
+	isOk := false
+	respErr := errDeferNoResponse
+	defer func() {
+		ok <- isOk
+		err <- respErr
+	}()
+	var nr int64
+	nr, respErr = io.Copy(to, from)
 	if nr > 0 {
 		read.Add(float64(nr))
 	}
 	if err != nil {
-		ok <- false
 		err <- respErr
+		return
 	}
-	ok <- true
-	err <- nil
+	respErr = nil
+	isOk = true
 }
 
 // Adapted from io.copyBuffer
