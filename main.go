@@ -15,7 +15,7 @@ import (
 func main() {
 	level := flag.String("level", "info", "Log level is one of debug, info, warn, error, fatal, panic")
 	bind := flag.String("bind", ":3399", "Binding URL")
-	antivirusURL := flag.String("antivirus", "127.0.0.1:3398", "Destination antivirus URL")
+	antivirusURL := flag.String("antivirus", "127.0.0.1:3310", "Destination antivirus URL")
 	cert := flag.String("cert", "server.crt", "Server TLS certificate")
 	key := flag.String("key", "server.key", "Server TLS key")
 	pretty := flag.Bool("pretty", true, "Use pretty logging (slower)")
@@ -25,7 +25,7 @@ func main() {
 	}
 	loglevel, err := zerolog.ParseLevel(*level)
 	if err != nil {
-		log.Fatal().Str("loglevel", *level).Err(err).Msg("Loglevel must be one of debug, info, warn, error, fatal, panic")
+		log.Fatal().Str("loglevel", *level).Err(err).Msg("loglevel must be one of debug, info, warn, error, fatal, panic")
 	}
 	zerolog.SetGlobalLevel(loglevel)
 	zerolog.TimeFieldFormat = ""

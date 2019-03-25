@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/rs/zerolog/log"
 )
 
 // Response is a baseline response
@@ -27,16 +28,17 @@ type Proxy struct {
 
 // Scan performs an scan on the body of the request
 func (p *Proxy) Scan(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	log.Debug().Msg("recieved scan request")
 	infected, msg, err := p.AntiVirus.Scan(r.Body)
 	if err != nil {
 		writeResponse(w, r, &Response{
 			Message: msg,
 			Error:   err.Error(),
 		}, http.StatusInternalServerError)
-		getLog(r.Context()).Error().Str("daemon-response", msg).Err(err).Msg("Failed to scan")
+		getLog(r.Context()).Error().Str("daemon-response", msg).Err(err).Msg("failed to scan")
 		return
 	}
-	getLog(r.Context()).Info().Str("daemon-response", msg).Bool("infected", infected).Msg("Scan completed")
+	getLog(r.Context()).Info().Str("daemon-response", msg).Bool("infected", infected).Msg("scan completed")
 	writeResponse(w, r, &ScanResponse{
 		Infected: infected,
 		Response: Response{
@@ -46,9 +48,10 @@ func (p *Proxy) Scan(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 
 // Ok returns a response to a healthz request
 func (p *Proxy) Ok(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	log.Debug().Msg("recieved health request")
 	ok, msg, err := p.AntiVirus.Ok()
 	if err != nil {
-		getLog(r.Context()).Error().Bool("ok", ok).Str("daemon-response", msg).Err(err).Msg("Failed to ping daemon")
+		getLog(r.Context()).Error().Bool("ok", ok).Str("daemon-response", msg).Err(err).Msg("failed to ping daemon")
 		writeResponse(w, r, &Response{
 			Message: "Down",
 			Error:   fmt.Sprintf("%v - daemon response: %v", err.Error(), msg),
@@ -60,10 +63,10 @@ func (p *Proxy) Ok(w http.ResponseWriter, r *http.Request, _ httprouter.Params) 
 			Message: "Down",
 			Error:   msg,
 		}, http.StatusInternalServerError)
-		getLog(r.Context()).Error().Bool("ok", ok).Str("daemon-response", msg).Msg("Pinged daemon")
+		getLog(r.Context()).Error().Bool("ok", ok).Str("daemon-response", msg).Msg("pinged daemon")
 		return
 	}
-	getLog(r.Context()).Debug().Bool("ok", ok).Str("daemon-response", msg).Msg("Pinged daemon")
+	getLog(r.Context()).Debug().Bool("ok", ok).Str("daemon-response", msg).Msg("pinged daemon")
 	writeResponse(w, r, &Response{
 		Message: "Ok",
 	}, http.StatusOK)
