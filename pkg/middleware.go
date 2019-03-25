@@ -2,6 +2,7 @@ package chowder
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -33,15 +34,22 @@ var (
 type key int
 
 func getLog(ctx context.Context) *zerolog.Logger {
-	l, ok := ctx.Value(logKey).(zerolog.Logger)
+	l, ok := ctx.Value(logKey).(*zerolog.Logger)
 	if !ok {
-		l = log.With().Logger()
+		newlog := log.With().Logger()
+		l = &newlog
 	}
-	return &l
+	return l
 }
 
-func setLog(ctx context.Context, l zerolog.Logger) context.Context {
+func setLog(ctx context.Context, l *zerolog.Logger) context.Context {
 	return context.WithValue(ctx, logKey, l)
+}
+
+func addLogFields(ctx context.Context, addFields func(zerolog.Context) zerolog.Context) {
+	oldLog := getLog(ctx)
+	newLog := addFields(oldLog.With()).Logger()
+	*oldLog = newLog
 }
 
 // StatusWriter wraps a responsewriter to track the status and content length
@@ -74,6 +82,7 @@ func LogRequests(handler http.Handler) http.HandlerFunc {
 		start := time.Now()
 		connCount.Inc()
 		l := log.With().
+			Time("start", start).
 			Str("host", r.Host).
 			Str("remote-address", r.RemoteAddr).
 			Str("method", r.Method).
@@ -82,7 +91,7 @@ func LogRequests(handler http.Handler) http.HandlerFunc {
 			Str("user-agent", r.Header.Get("User-Agent")).
 			Logger()
 		sw := &StatusWriter{ResponseWriter: w}
-		handler.ServeHTTP(sw, r.WithContext(setLog(r.Context(), l)))
+		handler.ServeHTTP(sw, r.WithContext(setLog(r.Context(), &l)))
 		statusCodes.Observe(float64(sw.status))
 		d := time.Now().Sub(start)
 		durations.Observe(d.Seconds())
@@ -110,4 +119,34 @@ func logLevelFromStatus(l zerolog.Logger, status int) *zerolog.Event {
 	default:
 		return l.Error()
 	}
+}
+
+// HeaderAuth enforces that users are authenticated by reading the Authorization header
+func HeaderAuth(users map[string]string, handler http.Handler) http.HandlerFunc {
+	if len(users) == 0 {
+		log.Warn().Msg("no users supplied, authentication is disabled")
+		return handler.ServeHTTP
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		t := r.Header.Get("Authorization")
+		user, ok := users[t]
+		if !ok {
+			writeResponse(w, r, &Response{
+				Error:   http.StatusText(http.StatusUnauthorized),
+				Message: getAuthFailureMessage(t),
+			}, http.StatusUnauthorized)
+			return
+		}
+		addLogFields(r.Context(), func(l zerolog.Context) zerolog.Context {
+			return l.Str("user", user)
+		})
+		handler.ServeHTTP(w, r)
+	}
+}
+
+func getAuthFailureMessage(t string) string {
+	if t == "" {
+		return "no authorisation token supplied"
+	}
+	return fmt.Sprintf("token '%v' not recognised", t)
 }

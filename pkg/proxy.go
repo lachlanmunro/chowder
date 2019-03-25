@@ -1,19 +1,13 @@
 package chowder
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
-
-// Response is a baseline response
-type Response struct {
-	Message string `json:"message,omitempty"`
-	Error   string `json:"error,omitempty"`
-}
 
 // ScanResponse is a response with the result of a scan
 type ScanResponse struct {
@@ -35,10 +29,14 @@ func (p *Proxy) Scan(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 			Message: msg,
 			Error:   err.Error(),
 		}, http.StatusInternalServerError)
-		getLog(r.Context()).Error().Str("daemon-response", msg).Err(err).Msg("failed to scan")
+		addLogFields(r.Context(), func(l zerolog.Context) zerolog.Context {
+			return l.Str("daemon-response", msg).Err(err)
+		})
 		return
 	}
-	getLog(r.Context()).Info().Str("daemon-response", msg).Bool("infected", infected).Msg("scan completed")
+	addLogFields(r.Context(), func(l zerolog.Context) zerolog.Context {
+		return l.Str("daemon-response", msg).Bool("infected", infected)
+	})
 	writeResponse(w, r, &ScanResponse{
 		Infected: infected,
 		Response: Response{
@@ -51,34 +49,26 @@ func (p *Proxy) Ok(w http.ResponseWriter, r *http.Request, _ httprouter.Params) 
 	log.Debug().Msg("recieved health request")
 	ok, msg, err := p.AntiVirus.Ok()
 	if err != nil {
-		getLog(r.Context()).Error().Bool("ok", ok).Str("daemon-response", msg).Err(err).Msg("failed to ping daemon")
+		addLogFields(r.Context(), func(l zerolog.Context) zerolog.Context {
+			return l.Bool("ok", ok).Str("daemon-response", msg).Err(err)
+		})
 		writeResponse(w, r, &Response{
 			Message: "Down",
 			Error:   fmt.Sprintf("%v - daemon response: %v", err.Error(), msg),
 		}, http.StatusInternalServerError)
 		return
 	}
+	addLogFields(r.Context(), func(l zerolog.Context) zerolog.Context {
+		return l.Bool("ok", ok).Str("daemon-response", msg)
+	})
 	if !ok {
 		writeResponse(w, r, &Response{
 			Message: "Down",
 			Error:   msg,
 		}, http.StatusInternalServerError)
-		getLog(r.Context()).Error().Bool("ok", ok).Str("daemon-response", msg).Msg("pinged daemon")
 		return
 	}
-	getLog(r.Context()).Debug().Bool("ok", ok).Str("daemon-response", msg).Msg("pinged daemon")
 	writeResponse(w, r, &Response{
 		Message: "Ok",
 	}, http.StatusOK)
-}
-
-func writeResponse(w http.ResponseWriter, r *http.Request, resp interface{}, code int) {
-	bytes, err := json.Marshal(resp)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(code)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(bytes)
 }
