@@ -13,11 +13,14 @@ type Response struct {
 
 func writeResponse(w http.ResponseWriter, r *http.Request, resp interface{}, code int) {
 	bytes, err := json.Marshal(resp)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	if err == nil {
+		w.WriteHeader(code)
+		w.Header().Set("Content-Type", "application/json")
+		_, err = w.Write(bytes)
+		if err == nil {
+			return
+		}
 	}
-	w.WriteHeader(code)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(bytes)
+	http.Error(w, err.Error(), http.StatusInternalServerError)
+	return
 }

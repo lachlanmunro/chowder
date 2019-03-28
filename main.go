@@ -67,7 +67,7 @@ func main() {
 	r.POST("/scan", proxy.Scan)
 	r.GET("/healthz", proxy.Ok)
 	r.GET("/metrics", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) { promhttp.Handler().ServeHTTP(w, r) })
-	api := chowder.LogRequests(chowder.HeaderAuth(users, r))
+	api := chowder.LogRequests(log.With().Logger(), chowder.HeaderAuth(users, r))
 	l.Fatal().Err(listenAndServe(l, *bind, *certFile, *keyFile, api)).Msg("closed")
 }
 

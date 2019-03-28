@@ -77,11 +77,11 @@ func (w *StatusWriter) Write(b []byte) (int, error) {
 }
 
 // LogRequests logs all requests that pass through with loglevel dependant on status code
-func LogRequests(handler http.Handler) http.HandlerFunc {
+func LogRequests(l zerolog.Logger, handler http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		connCount.Inc()
-		l := log.With().
+		l := l.With().
 			Time("start", start).
 			Str("host", r.Host).
 			Str("remote-address", r.RemoteAddr).
@@ -90,8 +90,19 @@ func LogRequests(handler http.Handler) http.HandlerFunc {
 			Str("proto", r.Proto).
 			Str("user-agent", r.Header.Get("User-Agent")).
 			Logger()
-		sw := &StatusWriter{ResponseWriter: w}
-		handler.ServeHTTP(sw, r.WithContext(setLog(r.Context(), &l)))
+		sw := StatusWriter{ResponseWriter: w}
+		defer func() {
+			if r := recover(); r != nil {
+				d := time.Now().Sub(start)
+				durations.Observe(d.Seconds())
+				logPanic(r, logLevelFromStatus(l, sw.status).
+					Int("status", sw.status).
+					Int("content-length", sw.length).
+					Dur("duration", d)).
+					Msg("response returned")
+			}
+		}()
+		handler.ServeHTTP(&sw, r.WithContext(setLog(r.Context(), &l)))
 		statusCodes.Observe(float64(sw.status))
 		d := time.Now().Sub(start)
 		durations.Observe(d.Seconds())
@@ -100,6 +111,21 @@ func LogRequests(handler http.Handler) http.HandlerFunc {
 			Int("content-length", sw.length).
 			Dur("duration", d).
 			Msg("response returned")
+	}
+}
+
+func logPanic(p interface{}, e *zerolog.Event) *zerolog.Event {
+	switch p.(type) {
+	case error:
+		return e.Err(p.(error))
+	case string:
+		return e.Str("panic-logger", p.(string))
+	case fmt.Stringer:
+		return e.Str("panic-logger", p.(fmt.Stringer).String())
+	case fmt.GoStringer:
+		return e.Str("panic-logger", p.(fmt.GoStringer).GoString())
+	default:
+		return e.Interface("panic-logger", p)
 	}
 }
 

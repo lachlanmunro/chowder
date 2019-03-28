@@ -11,7 +11,7 @@ All the API endpoints are hand tested, no unit or integration CI yet. Probably n
 
 ## Key Points
 * Needs a backing clamd setup with a tcp socket.
-* Auth using an `Authorize` header if you supply a users.yml (a yaml dict of `token: username`).
+* Auth using an `Authorization` header if you supply a users.yml (a yaml dict of `token: username`).
 * HTTPS if either of the supplied `certfile` or `keyfile` resolve to a file.
 * POST /scan performs an instream scan using the post body (will correctly chunk for instream, just send your files as straight binary in the body).
 * GET /healthz performs a health check and calls ping on the underlying antivirus.

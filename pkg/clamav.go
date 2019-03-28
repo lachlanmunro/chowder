@@ -32,8 +32,8 @@ var (
 
 // VirusScanner is the interface for a virus scanning service
 type VirusScanner interface {
-	Scan(stream io.Reader) (bool, string, error)
-	Ok() (bool, string, error)
+	Scan(stream io.Reader) (infected bool, msg string, err error)
+	Ok() (ok bool, msg string, err error)
 }
 
 // ClamAV is a virus scanning service backed by a ClamAV tcp connection
