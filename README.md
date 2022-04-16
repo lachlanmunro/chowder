@@ -1,20 +1,19 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/lachlanmunro/chowder)](https://goreportcard.com/report/github.com/lachlanmunro/chowder)
 # Chowder
-[![Go](https://github.com/lachlanmunro/chowder/actions/workflows/go.yml/badge.svg)](https://github.com/lachlanmunro/chowder/actions/workflows/go.yml)
 
-Chowder is a REST API for ClamAV written in Go.
-* HTTPS
-* JSON logs
-* Prometheus metrics
+Chowder is a HTTP Proxy for the ClamAV antivirus. It has run providing ClanAV scans for live services in house for years.
 
-## Current state
-All the API endpoints are hand tested, no unit or integration CI yet. Probably needs a tomb on the response goroutine. Missing a panic handler so you might get some text where you should be getting JSON (from the router). Not benchmarked or optimised further than by eyeball. Beta means beta.
-
-## Key Points
-* Needs a backing clamd setup with a tcp socket.
-* Auth using an `Authorization` header if you supply a users.yml (a yaml dict of `token: username`).
+It assumes you want to run ClamAV to scan things but you also want (perhaps because you want to loadbalance/provision into a service mesh/K8S):
+* POST /scan passing the entire body as a binary stream to the backing ClanAV (transparently converting format).
+* GET /metrics Prometheus endpoint with throughput, scan outcome, durations etc.
+* GET /healthz endpoints for load balancing.
 * HTTPS if either of the supplied `certfile` or `keyfile` resolve to a file.
-* POST /scan performs an instream scan using the post body (will correctly chunk for instream, just send your files as straight binary in the body).
-* GET /healthz performs a health check and calls ping on the underlying antivirus.
-* GET /metrics returns prometheus metrics.
-* Quirks of Go mean you need to set false flags like `-pretty=false` (ie if you want JSON logs).
-* Should get one line of log entry per request so long as loglevel is info or above.
+* Logs (preferably JSON) for all scan requests with the outcomes clearly logged.
+* Auth (arbitary token) using an `Authorization` header if you supply a `users.yml` (a yaml dict of `token: username`).
+* Minimal overhead in RAM/CPU/Latency.
+
+## Deployment
+* Setup a backing `clamd` with a tcp socket (presumably over localhost/pod container neighbour).
+* Clone this repository, install go
+* Run `go build` at the root of the cloned repository
+* Run the chowder binary (with `--help` for config flags)
