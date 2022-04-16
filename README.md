@@ -1,5 +1,5 @@
 # Chowder
-[![Build Status](https://travis-ci.org/lachlanmunro/chowder.svg?branch=master)](https://travis-ci.org/lachlanmunro/chowder)
+[![Go](https://github.com/lachlanmunro/chowder/actions/workflows/go.yml/badge.svg)](https://github.com/lachlanmunro/chowder/actions/workflows/go.yml)
 
 Chowder is a REST API for ClamAV written in Go.
 * HTTPS
