@@ -49,12 +49,14 @@ func NewClamAV(connectionString string) VirusScanner {
 		connectionString: connectionString,
 		prefixPool: sync.Pool{
 			New: func() interface{} {
-				return make([]byte, 4)
+				n := make([]byte, 4)
+				return &n
 			},
 		},
 		bufferPool: sync.Pool{
 			New: func() interface{} {
-				return make([]byte, 32*1024)
+				n := make([]byte, 32*1024)
+				return &n
 			},
 		},
 	}
@@ -145,8 +147,8 @@ func getResponse(from net.Conn, to io.Writer, ok chan bool, err chan error) {
 
 // Adapted from io.copyBuffer
 func (av *ClamAV) stream(dst io.Writer, src io.Reader) (err error) {
-	buf := av.bufferPool.Get().([]byte)
-	prefix := av.prefixPool.Get().([]byte)
+	buf := *av.bufferPool.Get().(*[]byte)
+	prefix := *av.prefixPool.Get().(*[]byte)
 	for {
 		nr, er := src.Read(buf)
 		log.Debug().Int("read", nr).Int("length", len(buf)).Msg("read buffer")
@@ -187,8 +189,8 @@ func (av *ClamAV) stream(dst io.Writer, src io.Reader) (err error) {
 			break
 		}
 	}
-	av.bufferPool.Put(buf)
-	av.prefixPool.Put(prefix)
+	av.bufferPool.Put(&buf)
+	av.prefixPool.Put(&prefix)
 	return err
 }
 
