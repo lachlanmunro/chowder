@@ -22,5 +22,4 @@ func writeResponse(w http.ResponseWriter, r *http.Request, resp interface{}, cod
 		}
 	}
 	http.Error(w, err.Error(), http.StatusInternalServerError)
-	return
 }

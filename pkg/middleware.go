@@ -93,7 +93,7 @@ func LogRequests(l zerolog.Logger, handler http.Handler) http.HandlerFunc {
 		sw := StatusWriter{ResponseWriter: w}
 		defer func() {
 			if r := recover(); r != nil {
-				d := time.Now().Sub(start)
+				d := time.Since(start)
 				durations.Observe(d.Seconds())
 				logPanic(r, logLevelFromStatus(l, sw.status).
 					Int("status", sw.status).
@@ -104,7 +104,7 @@ func LogRequests(l zerolog.Logger, handler http.Handler) http.HandlerFunc {
 		}()
 		handler.ServeHTTP(&sw, r.WithContext(setLog(r.Context(), &l)))
 		statusCodes.Observe(float64(sw.status))
-		d := time.Now().Sub(start)
+		d := time.Since(start)
 		durations.Observe(d.Seconds())
 		logLevelFromStatus(l, sw.status).
 			Int("status", sw.status).
@@ -115,15 +115,15 @@ func LogRequests(l zerolog.Logger, handler http.Handler) http.HandlerFunc {
 }
 
 func logPanic(p interface{}, e *zerolog.Event) *zerolog.Event {
-	switch p.(type) {
+	switch p := p.(type) {
 	case error:
-		return e.Err(p.(error))
+		return e.Err(p)
 	case string:
-		return e.Str("panic-logger", p.(string))
+		return e.Str("panic-logger", p)
 	case fmt.Stringer:
-		return e.Str("panic-logger", p.(fmt.Stringer).String())
+		return e.Str("panic-logger", p.String())
 	case fmt.GoStringer:
-		return e.Str("panic-logger", p.(fmt.GoStringer).GoString())
+		return e.Str("panic-logger", p.GoString())
 	default:
 		return e.Interface("panic-logger", p)
 	}
