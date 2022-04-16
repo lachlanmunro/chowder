@@ -22,7 +22,7 @@ type Proxy struct {
 
 // Scan performs an scan on the body of the request
 func (p *Proxy) Scan(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	log.Debug().Msg("recieved scan request")
+	log.Debug().Msg("received scan request")
 	infected, msg, err := p.AntiVirus.Scan(r.Body)
 	if err != nil {
 		writeResponse(w, r, &Response{
@@ -46,7 +46,7 @@ func (p *Proxy) Scan(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 
 // Ok returns a response to a healthz request
 func (p *Proxy) Ok(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	log.Debug().Msg("recieved health request")
+	log.Debug().Msg("received health request")
 	ok, msg, err := p.AntiVirus.Ok()
 	if err != nil {
 		addLogFields(r.Context(), func(l zerolog.Context) zerolog.Context {

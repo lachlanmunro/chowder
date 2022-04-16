@@ -122,7 +122,7 @@ func (av *ClamAV) executeCommand(command clamCommand, additionalActions func(io.
 	if !<-wasOk {
 		return "", fmt.Errorf("failed getting response: %v", err)
 	}
-	log.Debug().Msg("recieved response")
+	log.Debug().Msg("received response")
 	return strings.Trim(resp.String(), "\000"), nil
 }
 
