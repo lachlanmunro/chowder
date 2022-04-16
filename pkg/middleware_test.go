@@ -43,7 +43,7 @@ func TestLoggingMiddlewareLogs(t *testing.T) {
 	sut.ServeHTTP(&mockResponseWriter{}, r)
 	line := w.String()
 
-	assert.Regexp(t, `{"level":"debug","start":".{20}","host":"","remote-address":"","method":"","request-uri":"","proto":"","user-agent":"","status":0,"content-length":0,"duration":.+,"message":"response returned"}`, line)
+	assert.Regexp(t, `{"level":"debug","start":".{20,25}","host":"","remote-address":"","method":"","request-uri":"","proto":"","user-agent":"","status":0,"content-length":0,"duration":.+,"message":"response returned"}`, line)
 }
 
 func TestAuthMiddlewareAllowsValidAuth(t *testing.T) {
