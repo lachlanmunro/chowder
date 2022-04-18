@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -26,7 +27,8 @@ func TestScanCorrectlyMakesClamAVScan(t *testing.T) {
 	prefix := make([]byte, 4)
 	binary.BigEndian.PutUint32(prefix, uint32(len(testText)))
 	mockConn.On("Write", prefix).Return(len(prefix), nil).Once()
-	mockConn.On("Write", []byte(testText)).Return(len(testText), nil).Once()
+	body := []byte(testText)
+	mockConn.On("Write", body).Return(len(testText), nil).Once()
 	emptyChunk := []byte{0, 0, 0, 0}
 	mockConn.On("Write", emptyChunk).Return(len(emptyChunk), nil).Once()
 	resp := []byte("nothing\000")
@@ -36,11 +38,22 @@ func TestScanCorrectlyMakesClamAVScan(t *testing.T) {
 	}).Return(len(resp), io.EOF).Once()
 	mockConn.On("Close").Return(nil).Once()
 	in := strings.NewReader(testText)
+	writtenValue := &dto.Metric{}
+	written.Write(writtenValue)
+	initialWritten := *writtenValue.Counter.Value
+	readValue := &dto.Metric{}
+	read.Write(readValue)
+	initialRead := *readValue.Counter.Value
 
 	infected, message, err := sut.Scan(in)
+
+	written.Write(writtenValue)
+	read.Write(readValue)
 	assert.False(t, infected)
 	assert.Equal(t, "nothing", message)
 	assert.Nil(t, err)
+	assert.Equal(t, float64(len(command)+len(prefix)+len(body)+len(emptyChunk)), *writtenValue.Counter.Value-initialWritten)
+	assert.Equal(t, float64(len(resp)), *readValue.Counter.Value-initialRead)
 	mockConn.AssertExpectations(t)
 }
 
