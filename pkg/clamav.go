@@ -39,6 +39,7 @@ type VirusScanner interface {
 // ClamAV is a virus scanning service backed by a ClamAV tcp connection
 type ClamAV struct {
 	connectionString string
+	dial             func() (net.Conn, error)
 	prefixPool       sync.Pool
 	bufferPool       sync.Pool
 }
@@ -47,6 +48,9 @@ type ClamAV struct {
 func NewClamAV(connectionString string) VirusScanner {
 	return &ClamAV{
 		connectionString: connectionString,
+		dial: func() (net.Conn, error) {
+			return net.Dial("tcp", connectionString)
+		},
 		prefixPool: sync.Pool{
 			New: func() interface{} {
 				n := make([]byte, 4)
@@ -96,7 +100,7 @@ func (av *ClamAV) Ok() (bool, string, error) {
 }
 
 func (av *ClamAV) executeCommand(command clamCommand, additionalActions func(io.Writer) error) (string, error) {
-	c, err := net.Dial("tcp", av.connectionString)
+	c, err := av.dial()
 	if err != nil {
 		return "", fmt.Errorf("could not connect: %v", err)
 	}
